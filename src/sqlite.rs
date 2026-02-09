@@ -1,7 +1,7 @@
 use diesel::associations::HasTable;
 use diesel::connection::{
-    AnsiTransactionManager, Connection, ConnectionSealed, DefaultLoadingMode, Instrumentation,
-    LoadConnection, MultiConnectionHelper, SimpleConnection, TransactionManager,
+    AnsiTransactionManager, CacheSize, Connection, ConnectionSealed, DefaultLoadingMode,
+    Instrumentation, LoadConnection, MultiConnectionHelper, SimpleConnection, TransactionManager,
 };
 use diesel::deserialize::{FromSqlRow, StaticallySizedRow};
 use diesel::dsl::{Find, Update};
@@ -100,6 +100,11 @@ impl Connection for InstrumentedSqliteConnection {
     #[instrument(fields(db.system="sqlite", otel.kind="client"), skip(self, instrumentation))]
     fn set_instrumentation(&mut self, instrumentation: impl Instrumentation) {
         self.inner.set_instrumentation(instrumentation)
+    }
+
+    #[instrument(fields(db.system="sqlite", otel.kind="client"), skip(self, cache_size))]
+    fn set_prepared_statement_cache_size(&mut self, cache_size: CacheSize) {
+        self.inner.set_prepared_statement_cache_size(cache_size)
     }
 }
 

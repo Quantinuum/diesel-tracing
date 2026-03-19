@@ -109,12 +109,14 @@ impl Connection for InstrumentedSqliteConnection {
 }
 
 impl LoadConnection<DefaultLoadingMode> for InstrumentedSqliteConnection {
-    type Cursor<'conn, 'query> = <SqliteConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
-        where
-            Self: 'conn;
-    type Row<'conn, 'query> = <SqliteConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
-        where
-            Self: 'conn;
+    type Cursor<'conn, 'query>
+        = <SqliteConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
+    where
+        Self: 'conn;
+    type Row<'conn, 'query>
+        = <SqliteConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
+    where
+        Self: 'conn;
 
     #[cfg_attr(
         feature = "statement-fields",

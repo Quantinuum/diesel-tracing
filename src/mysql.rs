@@ -1,7 +1,7 @@
 use diesel::associations::HasTable;
 use diesel::connection::{
-    AnsiTransactionManager, Connection, ConnectionSealed, DefaultLoadingMode, Instrumentation,
-    LoadConnection, MultiConnectionHelper, SimpleConnection, TransactionManager,
+    AnsiTransactionManager, CacheSize, Connection, ConnectionSealed, DefaultLoadingMode,
+    Instrumentation, LoadConnection, MultiConnectionHelper, SimpleConnection, TransactionManager,
 };
 use diesel::dsl::{Find, Update};
 use diesel::expression::{is_aggregate, MixedAggregates, QueryMetadata, ValidGrouping};
@@ -96,15 +96,22 @@ impl Connection for InstrumentedMysqlConnection {
     fn set_instrumentation(&mut self, instrumentation: impl Instrumentation) {
         self.inner.set_instrumentation(instrumentation)
     }
+
+    #[instrument(fields(db.system="mysql", otel.kind="client"), skip(self, cache_size))]
+    fn set_prepared_statement_cache_size(&mut self, cache_size: CacheSize) {
+        self.inner.set_prepared_statement_cache_size(cache_size)
+    }
 }
 
 impl LoadConnection<DefaultLoadingMode> for InstrumentedMysqlConnection {
-    type Cursor<'conn, 'query> = <MysqlConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
-        where
-            Self: 'conn;
-    type Row<'conn, 'query> = <MysqlConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
-        where
-            Self: 'conn;
+    type Cursor<'conn, 'query>
+        = <MysqlConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
+    where
+        Self: 'conn;
+    type Row<'conn, 'query>
+        = <MysqlConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
+    where
+        Self: 'conn;
 
     #[cfg_attr(
         feature = "statement-fields",

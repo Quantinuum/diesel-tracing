@@ -1,6 +1,6 @@
 use diesel::associations::HasTable;
 use diesel::connection::{
-    AnsiTransactionManager, Connection, ConnectionSealed, DefaultLoadingMode,
+    AnsiTransactionManager, CacheSize, Connection, ConnectionSealed, DefaultLoadingMode,
     MultiConnectionHelper, SimpleConnection,
 };
 use diesel::connection::{Instrumentation, LoadConnection, TransactionManager};
@@ -209,17 +209,32 @@ impl Connection for InstrumentedPgConnection {
     fn set_instrumentation(&mut self, instrumentation: impl Instrumentation) {
         self.inner.set_instrumentation(instrumentation)
     }
+
+    #[instrument(
+        fields(
+            db.name=%self.info.current_database,
+            db.system="postgresql",
+            db.version=%self.info.version,
+            otel.kind="client",
+            net.peer.ip=%self.info.inet_server_addr,
+            net.peer.port=%self.info.inet_server_port,
+        ),
+        skip(self, cache_size)
+    )]
+    fn set_prepared_statement_cache_size(&mut self, cache_size: CacheSize) {
+        self.inner.set_prepared_statement_cache_size(cache_size)
+    }
 }
 
 impl LoadConnection<DefaultLoadingMode> for InstrumentedPgConnection {
-    type Cursor<'conn, 'query> =
-        <PgConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
-            where
-                Self: 'conn;
-    type Row<'conn, 'query> =
-        <PgConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
-            where
-                Self: 'conn;
+    type Cursor<'conn, 'query>
+        = <PgConnection as LoadConnection<DefaultLoadingMode>>::Cursor<'conn, 'query>
+    where
+        Self: 'conn;
+    type Row<'conn, 'query>
+        = <PgConnection as LoadConnection<DefaultLoadingMode>>::Row<'conn, 'query>
+    where
+        Self: 'conn;
 
     #[cfg_attr(
         feature = "statement-fields",
@@ -265,12 +280,12 @@ impl LoadConnection<DefaultLoadingMode> for InstrumentedPgConnection {
 }
 
 impl LoadConnection<PgRowByRowLoadingMode> for InstrumentedPgConnection {
-    type Cursor<'conn, 'query> =
-        <PgConnection as LoadConnection<PgRowByRowLoadingMode>>::Cursor<'conn, 'query>
+    type Cursor<'conn, 'query>
+        = <PgConnection as LoadConnection<PgRowByRowLoadingMode>>::Cursor<'conn, 'query>
     where
         Self: 'conn;
-    type Row<'conn, 'query> =
-        <PgConnection as LoadConnection<PgRowByRowLoadingMode>>::Row<'conn, 'query>
+    type Row<'conn, 'query>
+        = <PgConnection as LoadConnection<PgRowByRowLoadingMode>>::Row<'conn, 'query>
     where
         Self: 'conn;
 

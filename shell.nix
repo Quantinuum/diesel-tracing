@@ -3,6 +3,9 @@
 pkgs.mkShell {
   name = "diesel-tracing-dev-env";
   buildInputs = with pkgs; [
+    cargo
+    rustfmt
+    
     pkg-config
     postgresql
     libmysqlclient

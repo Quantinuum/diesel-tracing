@@ -18,7 +18,36 @@ database driver to support. Just as in diesel configure this in your
 diesel-tracing = { version = "<version>", features = ["<postgres|mysql|sqlite>"] }
 ```
 
-## Establishing a connection
+## Instrumentation Trait
+
+`diesel` exposes and `Instrumentation` trait that has an implementation in this trait
+as `TracingInstrumentation`. By default this will record events at DEBUG level as well
+as any errors at ERROR level. Optionally you can also include the URL of the database
+connection in these events.
+
+```rust
+#[cfg(feature = "postgres")]
+{
+    use diesel::Connection;
+    use diesel::pg::PgConnection;
+    use diesel_tracing::TracingInstrumentation;
+
+    let url = std::env::var("POSTGRESQL_URL").expect("POSTGRESQL_URL env var not set");
+    let mut conn = PgConnection::establish(&url)
+        .expect("failed to establish connection");
+    conn.set_instrumentation(TracingInstrumentation::new(false));
+}
+```
+
+See the `diesel` documentation for the `diesel::Instrumentation` trait for more information
+about this trait and its usage.
+
+## Connection Wrappers
+
+The connection wrappers provide an alternative way to add instrumentation to connections,
+though their utility may be lesser compared to the `Instrumentation` trait approach.
+
+### Establishing a connection
 
 `diesel-tracing` has several instrumented connection structs that wrap the underlying
 `diesel` implementations of the connection. As these structs also implement the
@@ -31,14 +60,36 @@ the `diesel` crate. For example, with the `postgres` feature flag:
     use diesel::Connection;
     use diesel_tracing::pg::InstrumentedPgConnection;
 
-    let conn = InstrumentedPgConnection::establish("postgresql://example");
+    let url = std::env::var("POSTGRESQL_URL").expect("POSTGRESQL_URL env var not set");
+    let conn = InstrumentedPgConnection::establish(&url)
+        .expect("failed to establish connection");
 }
 ```
 
 This connection can then be used with diesel dsl methods such as
 `diesel::prelude::RunQueryDsl::execute` or `diesel::prelude::RunQueryDsl::get_results`.
 
-## Code reuse
+### Combination with the `Instrumentation` trait
+
+It is possible to use both the connection wrappers and the `Instrumentation` trait together
+if desired, though this may lead to excessive duplicate events being created.
+
+```rust
+#[cfg(feature = "postgres")]
+{
+    use diesel::Connection;
+    use diesel_tracing::pg::InstrumentedPgConnection;
+    use diesel_tracing::TracingInstrumentation;
+
+    let url = std::env::var("POSTGRESQL_URL").expect("POSTGRESQL_URL env var not set");
+    let mut conn = InstrumentedPgConnection::establish(&url)
+        .expect("failed to establish connection");
+    conn.set_instrumentation(TracingInstrumentation::new(false));
+}
+```
+
+
+### Code reuse
 
 In some applications it may be desirable to be able to use both instrumented and
 uninstrumented connections. For example, in the tests for a library. To achieve this
@@ -60,7 +111,7 @@ encapsulated by the `diesel::Connection` trait, so in those places it is
 likely that you will just need to replace your connection type with the
 Instrumented version.
 
-### Connection Pooling
+## Connection Pooling
 
 `diesel-tracing` supports the `r2d2` connection pool, through the `r2d2`
 feature flag. See `diesel::r2d2` for details of usage.
